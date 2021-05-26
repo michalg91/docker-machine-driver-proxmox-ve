@@ -22,10 +22,10 @@ import (
 
 	sshrw "github.com/mosolovsa/go_cat_sshfilerw"
 
-	"github.com/docker/machine/libmachine/drivers"
-	"github.com/docker/machine/libmachine/mcnflag"
-	mssh "github.com/docker/machine/libmachine/ssh"
-	"github.com/docker/machine/libmachine/state"
+	"github.com/rancher/machine/libmachine/drivers"
+	"github.com/rancher/machine/libmachine/mcnflag"
+	mssh "github.com/rancher/machine/libmachine/ssh"
+	"github.com/rancher/machine/libmachine/state"
 	"github.com/labstack/gommon/log"
 )
 
