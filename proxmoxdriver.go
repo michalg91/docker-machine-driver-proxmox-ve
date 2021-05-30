@@ -53,15 +53,15 @@ type Driver struct {
 	DiskSize        string // disk size in GB
 	Memory          int    // memory in GB
 	StorageFilename string
-	Onboot          string // Specifies whether a VM will be started during system bootup.
-	Protection      string // Sets the protection flag of the VM. This will disable the remove VM and remove disk operations.
+	Onboot          bool // Specifies whether a VM will be started during system bootup.
+	Protection      bool // Sets the protection flag of the VM. This will disable the remove VM and remove disk operations.
 	Citype          string // Specifies the cloud-init configuration format.
-	NUMA            string // Enable/disable NUMA
+	NUMA            bool // Enable/disable NUMA
 
-	CiEnabled string
+	CiEnabled bool
 
 	NetModel    string // Net Interface Model, [e1000, virtio, realtek, etc...]
-	NetFirewall string // Enable/disable firewall
+	NetFirewall bool // Enable/disable firewall
 	NetMtu      string // set nic MTU
 	NetBridge   string // bridge applied to network interface
 	NetVlanTag  int    // vlan tag
@@ -201,11 +201,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "memory in GB",
 			Value:  8,
 		},
-		mcnflag.StringFlag{
+		mcnflag.BoolFlag{
 			EnvVar: "PROXMOXVE_VM_NUMA",
 			Name:   "proxmoxve-vm-numa",
 			Usage:  "enable/disable NUMA",
-			Value:  "", // leave the flag default value blank to support the clone default behavior if not explicity set of 'use what is most appropriate'
 		},
 		mcnflag.StringFlag{
 			EnvVar: "PROXMOXVE_VM_CPU",
@@ -237,17 +236,15 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "make a full clone or not (0=false, 1=true, 2=use proxmox default logic",
 			Value:  2,
 		},
-		mcnflag.StringFlag{
+		mcnflag.BoolFlag{
 			EnvVar: "PROXMOXVE_VM_START_ONBOOT",
 			Name:   "proxmoxve-vm-start-onboot",
-			Usage:  "make the VM start automatically onboot (0=false, 1=true, ''=default)",
-			Value:  "", // leave the flag default value blank to support the clone default behavior if not explicity set of 'use what is most appropriate'
+			Usage:  "make the VM start automatically onboot",
 		},
-		mcnflag.StringFlag{
+		mcnflag.BoolFlag{
 			EnvVar: "PROXMOXVE_VM_PROTECTION",
 			Name:   "proxmoxve-vm-protection",
-			Usage:  "protect the VM and disks from removal (0=false, 1=true, ''=default)",
-			Value:  "", // leave the flag default value blank to support the clone default behavior if not explicity set of 'use what is most appropriate'
+			Usage:  "protect the VM and disks from removal",
 		},
 		mcnflag.StringFlag{
 			EnvVar: "PROXMOXVE_VM_CITYPE",
@@ -255,11 +252,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "cloud-init type (nocloud|configdrive2)",
 			Value:  "", // leave the flag default value blank to support the clone default behavior if not explicity set of 'use what is most appropriate'
 		},
-		mcnflag.StringFlag{
+		mcnflag.BoolFlag{
 			EnvVar: "PROXMOXVE_VM_CIENABLED",
 			Name:   "proxmoxve-vm-cienabled",
-			Usage:  "cloud-init enabled (implied with clone strategy 0=false, 1=true, ''=default)",
-			Value:  "", // leave the flag default value blank to support the clone default behavior if not explicity set of 'use what is most appropriate'
+			Usage:  "cloud-init enabled (implied with clone strategy)",
 		},
 		mcnflag.StringFlag{
 			EnvVar: "PROXMOXVE_VM_IMAGE_FILE",
@@ -273,11 +269,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "Net Interface model, default virtio (e1000, virtio, realtek, etc...)",
 			Value:  "virtio",
 		},
-		mcnflag.StringFlag{
+		mcnflag.BoolFlag{
 			EnvVar: "PROXMOXVE_VM_NET_FIREWALL",
 			Name:   "proxmoxve-vm-net-firewall",
-			Usage:  "enable/disable firewall (0=false, 1=true, ''=default)",
-			Value:  "",
+			Usage:  "enable/disable firewall",
 		},
 		mcnflag.StringFlag{
 			EnvVar: "PROXMOXVE_VM_NET_MTU",
@@ -380,20 +375,20 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.VMIDRange = flags.String("proxmoxve-vm-vmid-range")
 	d.CloneVMID = flags.String("proxmoxve-vm-clone-vmid")
 	d.CloneFull = flags.Int("proxmoxve-vm-clone-full")
-	d.Onboot = flags.String("proxmoxve-vm-start-onboot")
-	d.Protection = flags.String("proxmoxve-vm-protection")
+	d.Onboot = flags.Bool("proxmoxve-vm-start-onboot")
+	d.Protection = flags.Bool("proxmoxve-vm-protection")
 	d.Citype = flags.String("proxmoxve-vm-citype")
-	d.CiEnabled = flags.String("proxmoxve-vm-cienabled")
+	d.CiEnabled = flags.Bool("proxmoxve-vm-cienabled")
 	d.ImageFile = flags.String("proxmoxve-vm-image-file")
 	d.CPUSockets = flags.String("proxmoxve-vm-cpu-sockets")
 	d.CPU = flags.String("proxmoxve-vm-cpu")
 	d.CPUCores = flags.String("proxmoxve-vm-cpu-cores")
 	d.NetModel = flags.String("proxmoxve-vm-net-model")
-	d.NetFirewall = flags.String("proxmoxve-vm-net-firewall")
+	d.NetFirewall = flags.Bool("proxmoxve-vm-net-firewall")
 	d.NetMtu = flags.String("proxmoxve-vm-net-mtu")
 	d.NetBridge = flags.String("proxmoxve-vm-net-bridge")
 	d.NetVlanTag = flags.Int("proxmoxve-vm-net-tag")
-	d.NUMA = flags.String("proxmoxve-vm-numa")
+	d.NUMA = flags.Bool("proxmoxve-vm-numa")
 	d.ScsiController = flags.String("proxmoxve-vm-scsi-controller")
 	d.ScsiAttributes = flags.String("proxmoxve-vm-scsi-attributes")
 
@@ -628,6 +623,8 @@ func (d *Driver) Create() error {
 		return err
 	}
 
+	var sTrue string = "1"
+
 	// !! Workaround for MC-7982.
 	key = strings.TrimSpace(key)
 	key = fmt.Sprintf("%s %s-%d", key, d.MachineName, time.Now().Unix())
@@ -713,7 +710,6 @@ func (d *Driver) Create() error {
 			VMID:       d.VMID,
 			Agent:      "1",
 			Autostart:  "1",
-			Onboot:     d.Onboot,
 			Memory:     d.Memory,
 			Sockets:    d.CPUSockets,
 			Cores:      d.CPUCores,
@@ -725,16 +721,24 @@ func (d *Driver) Create() error {
 			Scsihw:     d.ScsiController,
 			SATA0:      d.ImageFile+",media=cdrom",
 			Pool:       d.Pool,
-			Protection: d.Protection,
 		}
 
-		if d.CiEnabled == "1" {
+		if d.CiEnabled {
 			npp.Citype = d.Citype
 			npp.Ide3 = d.Storage + ":cloudinit"
 		}
 
-		if len(d.NUMA) > 0 {
-			npp.NUMA = d.NUMA
+		if d.Protection {
+			npp.Protection = sTrue
+		}
+
+		if d.Onboot {
+			npp.Onboot = sTrue
+		}
+
+
+		if d.NUMA {
+			npp.NUMA = sTrue
 		}
 
 		if len(d.CPU) > 0 {
@@ -769,7 +773,7 @@ func (d *Driver) Create() error {
 			return err
 		}
 
-		if d.CiEnabled == "1" {
+		if d.CiEnabled {
 			// specially handle setting sshkeys
 			// https://forum.proxmox.com/threads/how-to-use-pvesh-set-vms-sshkeys.52570/
 			taskid, err = d.driver.NodesNodeQemuVMIDConfigSetSSHKeys(d.Node, d.VMID, key)
@@ -843,16 +847,22 @@ func (d *Driver) Create() error {
 			KVM:        "1", // if you test in a nested environment, you may have to change this to 0 if you do not have nested virtualization,
 			Tablet:     "0",
 			Citype:     d.Citype,
-			Onboot:     d.Onboot,
-			Protection: d.Protection,
 		}
 
 		if len(d.NetBridge) > 0 {
 			npp.Net0, _ = d.generateNetString()
 		}
 
-		if len(d.NUMA) > 0 {
-			npp.NUMA = d.NUMA
+		if d.Protection {
+			npp.Protection = sTrue
+		}
+
+		if d.Onboot {
+			npp.Onboot = sTrue
+		}
+
+		if d.NUMA {
+			npp.NUMA = sTrue
 		}
 
 		if len(d.CPU) > 0 {
@@ -993,8 +1003,8 @@ func (d *Driver) generateNetString() (string, error) {
 		net = fmt.Sprintf(net+",tag=%d", d.NetVlanTag)
 	}
 
-	if len(d.NetFirewall) > 0 {
-		net = fmt.Sprintf(net+",firewall=%s", d.NetFirewall)
+	if d.NetFirewall {
+		net = net+",firewall=1"
 	}
 
 	if len(d.NetMtu) > 0 {
