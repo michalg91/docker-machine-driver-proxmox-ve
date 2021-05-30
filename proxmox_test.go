@@ -1,9 +1,8 @@
 package dockermachinedriverproxmoxve_test
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	dockermachinedriverproxmoxve "github.com/lnxbil/docker-machine-driver-proxmox-ve"
@@ -12,7 +11,7 @@ import (
 func TestSuccessfulConnection(t *testing.T) {
 	api := EstablishConnection(t)
 
-	val, err := strconv.ParseFloat(api.Version, 32)
+	val, err := strconv.ParseFloat(strings.Split(api.Version, "-")[0], 32)
 	if err != nil {
 		t.Error("Error occured")
 		t.Error(err)
@@ -56,47 +55,11 @@ func TestWrongHost(t *testing.T) {
 	}
 }
 
-func checkStorageType(t *testing.T, api *dockermachinedriverproxmoxve.ProxmoxVE, storageName string, shouldStorageType string) error {
-	ret, err := api.GetStorageType(GetProxmoxNode(), storageName)
-	if err != nil {
-		return err
-	}
-	if ret != shouldStorageType {
-		return errors.New(fmt.Sprintf("storage type should have been '%s', but was '%s' for storage '%s'", shouldStorageType, ret, storageName))
-	}
-	return nil
-}
-
 func TestStorageType(t *testing.T) {
 	api := EstablishConnection(t)
-
-	err := checkStorageType(t, api, "local-lvm", "lvmthin")
+	_, err := api.ClusterVMIDNodeGet("600")
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = checkStorageType(t, api, "local", "dir")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = checkStorageType(t, api, "nfs", "nfs")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = checkStorageType(t, api, "zpool", "zfspool")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = checkStorageType(t, api, "lvm", "lvm")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = checkStorageType(t, api, "not-existent", "2")
-	if err == nil {
-		t.Fatalf("non-existent storage should have raised an error")
+		t.Log(err)
+		t.Error()
 	}
 }
