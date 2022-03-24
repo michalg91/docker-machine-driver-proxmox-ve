@@ -793,6 +793,7 @@ func (d *Driver) Create() error {
 			Newid: d.VMID,
 			Name:  d.BaseDriver.MachineName,
 			Pool:  d.Pool,
+			Target: node,
 		}
 
 		switch d.CloneFull {
@@ -811,8 +812,11 @@ func (d *Driver) Create() error {
 		}
 
 		d.debugf("cloning template id '%s' as vmid '%s'", d.CloneVMID, clone.Newid)
-
-		taskid, err := d.driver.NodesNodeQemuVMIDClonePost(node, d.CloneVMID, &clone)
+		clone_node, err := d.driver.ClusterVMIDNodeGet(d.CloneVMID)
+		if err != nil {
+			return err
+		}
+		taskid, err := d.driver.NodesNodeQemuVMIDClonePost(clone_node, d.CloneVMID, &clone)
 		if err != nil {
 			return err
 		}
