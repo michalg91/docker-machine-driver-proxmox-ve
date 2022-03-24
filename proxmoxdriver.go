@@ -821,7 +821,7 @@ func (d *Driver) Create() error {
 			return err
 		}
 
-		err = d.driver.WaitForTaskToComplete(node, taskid)
+		err = d.driver.WaitForTaskToComplete(clone_node, taskid)
 		if err != nil {
 			return err
 		}
