@@ -871,7 +871,7 @@ func (d *Driver) Create() error {
 
 		// append newly minted ssh key to existing (if any)
 		d.debugf("retrieving existing cloud-init sshkeys from vmid '%s'", d.VMID)
-		config, err := d.driver.GetConfig(node, d.CloneVMID)
+		config, err := d.driver.GetConfig(clone_node, d.CloneVMID)
 		if err != nil {
 			return err
 		}
